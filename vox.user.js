@@ -832,7 +832,7 @@
  
  
 	</style>
-	<div class="dialog"><div class="close" onclick="this.parentNode.style.display='none';"></div>
+	<div class="dialog" id="dialogcontrol"><div class="close" onclick="this.parentNode.style.display='none';"></div>
 	<img src="https://i.imgur.com/P77vcpI.png" alt="BY FOCHOMOCHO">
 	<div style="overflow: auto; text-align: justify;">
 	  <p style="display: inline-block; color: lightgreen; margin-right: 10px;">Status: <span style="color: lightgreen;">Working</span></p>
