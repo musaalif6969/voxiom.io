@@ -1,985 +1,1024 @@
-	// ==UserScript==
-	// @name         Voxiom.IO Aimbot ESP
-	// @namespace    http://tampermonkey.net/
-	// @version      0.2
-	// @description  esp aimbot
-	// @author       fochomocho
-	// @match        *://voxiom.io/*
-	// @icon         https://www.google.com/s2/favicons?sz=64&domain=voxiom.io
-	// @grant        none
-	// @run-at       document-start
-	// @require      https://unpkg.com/three@0.150.0/build/three.min.js
-	// @require      https://cdn.jsdelivr.net/npm/lil-gui@0.19
-	// ==/UserScript==
+// ==UserScript==
+// @name         Voxiom.IO Aimbot ESP
+// @namespace    http://tampermonkey.net/
+// @version      0.2
+// @description  esp aimbot
+// @author       fochomocho
+// @match        *://voxiom.io/*
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=voxiom.io
+// @grant        none
+// @run-at       document-start
+// @require      https://unpkg.com/three@0.150.0/build/three.min.js
+// @require      https://cdn.jsdelivr.net/npm/lil-gui@0.19
+// ==/UserScript==
+const THREE = window.THREE;
+delete window.THREE;
  
-	const THREE = window.THREE;
+const settings = {
+    showPlayers: true, 
+    showPlayerNames: true, 
+    showItems: true, 
+    showItemNames: false, 
+    showBlocks: true,
+    showOres: true, 
+    worldWireframe: false, 
+    aimbotEnabled: true, 
+    aimbotOnRightMouse: false, 
+    aimBehindWalls: false, 
+    aimHeight: 0.9, 
+    autoFire: true, 
+    aimAtEveryone: false,
+    editAimbotBlacklist() {
  
-	Object.defineProperty( window, 'THREE', {
-		get() {
+        const currList = Object.keys( aimbotBlacklist ).join( ', ' );
+        const string = prompt( 'Enter usernames of players for whom aimbot should be disabled.\nSeparated by single comma:', currList );
  
-			return undefined;
+        if ( string !== null ) {
  
-		}
-	} );
+            aimbotBlacklist = {};
+            string.split( ',' )
+                .map( name => name.trim().toLowerCase() )
+                .filter( name => name.length > 0 )
+                .forEach( name => ( aimbotBlacklist[ name ] = true ) );
  
-	const settings = {
-		showEsp: true,
-		showPlayerNames: true,
-		showItems: true,
-		showItemNames: false,
-		showBlocks: true,
-		showOres: true,
-		worldWireframe: false,
-		aimbotEnabled: true,
-		aimbotOnRightMouse: false,
-		aimBehindWalls: false,
-		aimHeight: 0.8,
-		autoFire: true,
-		aimAtEveryone: false,
-		addPlayerToBlacklist() {
+            updateBlacklistBtn();
  
-			const currList = Object.keys( aimbotBlacklist ).join( ', ' );
-			const string = prompt( 'Enter usernames of players for whom aimbot should be disabled.\nSeparated by single comma:', currList );
+        }
  
-			if ( string !== null ) {
+    }, 
+    showHelp() {
  
-				aimbotBlacklist = {};
-				string.split( ',' )
-					.map( name => name.trim().toLowerCase() )
-					.filter( name => name.length > 0 )
-					.forEach( name => ( aimbotBlacklist[ name ] = true ) );
+        dialogEl.style.display = dialogEl.style.display === '' ? 'none' : '';
  
-				updateBlacklistBtn();
+    }
+};
  
-			}
+let aimbotBlacklist = {
+    'player1': true
+};
  
-		}
-	};
+function updateBlacklistBtn() {
  
-	let aimbotBlacklist = {
-		'player1': true
-	};
+    let name = 'Edit Aimbot Blacklist';
+    
+    const n = Object.keys( aimbotBlacklist ).length;
+    if ( n > 0 ) name = `${name} (${n} user${n === 1 ? '' : 's'})`;
+    
+    controllers.editAimbotBlacklist.name( name );
  
-	function updateBlacklistBtn() {
+}
  
-		let name = 'Add Players to Blacklist';
+const gui = new lil.GUI();
+const controllers = {};
+for ( const key in settings ) {
  
-		const n = Object.keys( aimbotBlacklist ).length;
-		if ( n > 0 ) name = `${name} (${n} user${n === 1 ? '' : 's'})`;
+    controllers[ key ] = gui.add( settings, key ).name( fromCamel( key ) ).listen();
  
-		controllers.addPlayerToBlacklist.name( name );
+}
  
-	}
+controllers.aimHeight.min( 0 ).max( 1.5 );
+addDescription( controllers.aimAtEveryone, 'Enable this to make aimbot work in Survival mode.' );
+updateBlacklistBtn();
  
-	const gui = new lil.GUI();
-	const controllers = {};
-	for ( const key in settings ) {
+function addDescription( controller, text ) {
  
-		controllers[ key ] = gui.add( settings, key ).name( fromCamel( key ) ).listen();
+    const div = document.createElement( 'div' );
+    div.className = 'my-lil-gui-desc';
+    div.innerText = text;
+    controller.domElement.querySelector( '.name' ).appendChild( div ); 
  
-	}
+}
  
-	controllers.aimHeight.min( 0 ).max( 1.5 );
-	addDescription( controllers.aimAtEveryone, 'Enable this to make aimbot work in Survival mode.' );
-	updateBlacklistBtn();
+function fromCamel( text ) {
  
-	function addDescription( controller, text ) {
+    const result = text.replace( /([A-Z])/g, ' $1' );
+    return result.charAt( 0 ).toUpperCase() + result.slice( 1 );
  
-		const div = document.createElement( 'div' );
-		div.className = 'my-lil-gui-desc';
-		div.innerText = text;
-		controller.domElement.querySelector( '.name' ).appendChild( div );
+}
  
-	}
+let isRightDown = false;
+window.addEventListener( 'mousedown', event => {
  
-	function fromCamel( text ) {
+    if ( event.button === 2 ) isRightDown = true;
  
-		const result = text.replace( /([A-Z])/g, ' $1' );
-		return result.charAt( 0 ).toUpperCase() + result.slice( 1 );
+} );
+window.addEventListener( 'mouseup', event => {
  
-	}
+    if ( event.button === 2 ) isRightDown = false;
  
-	let isRightDown = false;
-	window.addEventListener( 'mousedown', event => {
+} );
  
-		if ( event.button === 2 ) isRightDown = true;
+const geometry = new THREE.EdgesGeometry( new THREE.BoxGeometry( 1, 1, 1 ).translate( 0, 0.5, 0 ) );
  
-	} );
-	window.addEventListener( 'mouseup', event => {
+const camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 1000 );
  
-		if ( event.button === 2 ) isRightDown = false;
+const renderer = new THREE.WebGLRenderer( {
+    alpha: true,
+    antialias: true
+} );
  
-	} );
+renderer.setPixelRatio( window.devicePixelRatio );
+renderer.setSize( window.innerWidth, window.innerHeight );
+renderer.domElement.id = 'overlayCanvas';
  
-	const geometry = new THREE.EdgesGeometry( new THREE.BoxGeometry( 1, 1, 1 ).translate( 0, 0.5, 0 ) );
+window.addEventListener( 'resize', () => {
  
-	const camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 1000 );
+    renderer.setSize( window.innerWidth, window.innerHeight );
  
-	const renderer = new THREE.WebGLRenderer( {
-		alpha: true,
-		antialias: true
-	} );
+} );
  
-	renderer.setPixelRatio( window.devicePixelRatio );
-	renderer.setSize( window.innerWidth, window.innerHeight );
-	renderer.domElement.id = 'overlayCanvas';
+const CTX = CanvasRenderingContext2D.prototype;
+CTX.fillText = new Proxy( CTX.fillText, {
+    apply( target, ctx, [ text ] ) {
  
-	window.addEventListener( 'resize', () => {
+        ctx.canvas.lastText = text;
  
-		renderer.setSize( window.innerWidth, window.innerHeight );
+        return Reflect.apply( ...arguments );
  
-	} );
+    }
+} );
  
-	const CTX = CanvasRenderingContext2D.prototype;
-	CTX.fillText = new Proxy( CTX.fillText, {
-		apply( target, ctx, [ text ] ) {
+const WebGL = WebGLRenderingContext.prototype;
  
-			ctx.canvas.lastText = text;
+const blocks = [
+    [ 0, 3 ], 
+    [ 1, 3 ], 
+    [ 4, 2 ], 
+    [ 5, 2 ], 
+    [ 7, 3 ], 
  
-			return Reflect.apply( ...arguments );
+    [ 2, 2 ], 
  
-		}
-	} );
+    [ 0, 4 ], [ 1, 4 ], [ 2, 4 ], 
+    [ 0, 5 ], [ 1, 5 ], [ 2, 5 ], 
+    [ 0, 6 ], [ 1, 6 ], [ 2, 6 ]
+];
+const blockCheck = blocks.map( ( [ x, y ] ) => `( p.x == ${x.toFixed( 1 )} && p.y == ${y.toFixed( 1 )} )` ).join( ' || ' );
  
-	const WebGL = WebGLRenderingContext.prototype;
+WebGL.shaderSource = new Proxy( WebGL.shaderSource, {
+    apply( target, thisArgs, args ) {
  
-	const blocks = [
-		[ 0, 3 ],
-		[ 1, 3 ],
-		[ 4, 2 ],
-		[ 5, 2 ],
-		[ 7, 3 ],
+        let [ shader, src ] = args;
  
-		[ 2, 2 ],
+        if ( src.indexOf( 'vRealUv = realUv;' ) > - 1 ) {
+                
+            src = src.replace( 'void main()', `
  
-		[ 0, 4 ], [ 1, 4 ], [ 2, 4 ],
-		[ 0, 5 ], [ 1, 5 ], [ 2, 5 ],
-		[ 0, 6 ], [ 1, 6 ], [ 2, 6 ]
-	];
-	const blockCheck = blocks.map( ( [ x, y ] ) => `( p.x == ${x.toFixed( 1 )} && p.y == ${y.toFixed( 1 )} )` ).join( ' || ' );
+            uniform bool showOres;
+            uniform float currTime;
  
-	WebGL.shaderSource = new Proxy( WebGL.shaderSource, {
-		apply( target, thisArgs, args ) {
+            void main()` )
+            .replace( 'vRealUv = realUv;', `vRealUv = realUv;
  
-			let [ shader, src ] = args;
+            float atlasDim = 16.0;
+            float tilePosX = max(0.01, min(0.99, fract(vRealUv.z)));
+            float tilePosY = max(0.01, min(0.99, fract(vRealUv.w)));
+            vec2 uv = vec2(vRealUv.x * (1.0 / atlasDim) + tilePosX * (1.0 / atlasDim), vRealUv.y * (1.0 / atlasDim) + tilePosY * (1.0 / atlasDim));
  
-			if ( src.indexOf( 'vRealUv = realUv;' ) > - 1 ) {
+            if ( showOres ) {
  
-				src = src.replace( 'void main()', `
+                vec2 p = uv * ( atlasDim - 1.0 );
+                p.x = fract( p.x ) > 0.5 ? ceil( p.x ) : floor( p.x ); 
+                p.y = fract( p.y ) > 0.5 ? ceil( p.y ) : floor( p.y );
+                if ( ${blockCheck} ) {
  
-				uniform bool showOres;
-				uniform float currTime;
+                    gl_Position.z = 0.99;
+                    vAo += 0.25 + abs( sin( currTime * 2.0 ) ) * 0.5;
  
-				void main()` )
-				.replace( 'vRealUv = realUv;', `vRealUv = realUv;
+                }
  
-				float atlasDim = 16.0;
-				float tilePosX = max(0.01, min(0.99, fract(vRealUv.z)));
-				float tilePosY = max(0.01, min(0.99, fract(vRealUv.w)));
-				vec2 uv = vec2(vRealUv.x * (1.0 / atlasDim) + tilePosX * (1.0 / atlasDim), vRealUv.y * (1.0 / atlasDim) + tilePosY * (1.0 / atlasDim));
+            }
  
-				if ( showOres ) {
+            ` );
  
-					vec2 p = uv * ( atlasDim - 1.0 );
-					p.x = fract( p.x ) > 0.5 ? ceil( p.x ) : floor( p.x );
-					p.y = fract( p.y ) > 0.5 ? ceil( p.y ) : floor( p.y );
-					if ( ${blockCheck} ) {
+            shader.isChunkShader = true;
  
-						gl_Position.z = 0.99;
-						vAo += 0.25 + abs( sin( currTime * 2.0 ) ) * 0.5;
+        }
  
-					}
+        args[ 1 ] = src;
  
-				}
+        return Reflect.apply( ...arguments );
  
-				` );
+    }
+} );
  
-				shader.isChunkShader = true;
+WebGL.attachShader = new Proxy( WebGL.attachShader, {
+    apply( target, thisArgs, [ program, shader ] ) {
  
-			}
+        if ( shader.isChunkShader ) program.isChunkProgram = true;
  
-			args[ 1 ] = src;
+        return Reflect.apply( ...arguments );
  
-			return Reflect.apply( ...arguments );
+    }
+} );
  
-		}
-	} );
+WebGL.useProgram = new Proxy( WebGL.useProgram, {
+    apply( target, gl, [ program ] ) {
  
-	WebGL.attachShader = new Proxy( WebGL.attachShader, {
-		apply( target, thisArgs, [ program, shader ] ) {
+        Reflect.apply( ...arguments );
  
-			if ( shader.isChunkShader ) program.isChunkProgram = true;
+        if ( program.isChunkProgram ) {
  
-			return Reflect.apply( ...arguments );
+            if ( ! program.initialized ) {
  
-		}
-	} );
+                program.uniforms = {
+                    showOres: gl.getUniformLocation( program, 'showOres' ), 
+                    currTime: gl.getUniformLocation( program, 'currTime' )
+                };
+                program.initialized = true;
  
-	WebGL.useProgram = new Proxy( WebGL.useProgram, {
-		apply( target, gl, [ program ] ) {
+            }
  
-			Reflect.apply( ...arguments );
+            gl.uniform1i( program.uniforms.showOres, settings.showOres );
+            gl.uniform1f( program.uniforms.currTime, performance.now() / 1000 );
  
-			if ( program.isChunkProgram ) {
+        }
  
-				if ( ! program.initialized ) {
+    }
+} );
  
-					program.uniforms = {
-						showOres: gl.getUniformLocation( program, 'showOres' ),
-						currTime: gl.getUniformLocation( program, 'currTime' )
-					};
-					program.initialized = true;
+const colors = {
+    enemy: 'red', 
+    team: 'lightgreen', 
+    block: 'green', 
+    item: 'gold'
+};
+for ( const key in colors ) {
  
-				}
+    const color = new THREE.Color( colors[ key ] );
+    color.rawColor = colors[ key ];
+    colors[ key ] = color;
  
-				gl.uniform1i( program.uniforms.showOres, settings.showOres );
-				gl.uniform1f( program.uniforms.currTime, performance.now() / 1000 );
+}
  
-			}
+    function MyMaterial(color) {
+        return new THREE.RawShaderMaterial({
+            vertexShader: `
+                attribute vec3 position;
+                uniform mat4 projectionMatrix;
+                uniform mat4 modelViewMatrix;
  
-		}
-	} );
+                void main() {
+                    // Set a constant depth value (z-coordinate)
+                    vec4 pos = projectionMatrix * modelViewMatrix * vec4(position.xy, 0.0, 1.0);
  
-	const colors = {
-		enemy: 'red',
-		team: 'lightgreen',
-		block: 'green',
-		item: 'gold'
-	};
-	for ( const key in colors ) {
+                    gl_Position = pos;
+                }
+            `,
+            fragmentShader: `
+                precision mediump float;
+                uniform vec3 color;
+                uniform float time;
  
-		const color = new THREE.Color( colors[ key ] );
-		color.rawColor = colors[ key ];
-		colors[ key ] = color;
+                void main() {
+                    // Create a dynamic pattern using time and trigonometric functions
+                    float r = 0.8 + 0.2 * sin(time + gl_FragCoord.x * 0.1);
+                    float g = 0.8 + 0.2 * sin(time + gl_FragCoord.y * 0.1);
+                    float b = 0.8 + 0.2 * cos(time * 0.5);
  
-	}
+                    gl_FragColor = vec4(color * vec3(r, g, b), 1.0);
+                }
+            `,
+            uniforms: {
+                color: { value: color },
+                time: { value: 0.0 }
+            }
+        });
  
-	function MyMaterial(color) {
-	    return new THREE.RawShaderMaterial({
-	        vertexShader: `
-	            attribute vec3 position;
-	            uniform mat4 projectionMatrix;
-	            uniform mat4 modelViewMatrix;
+}
  
-	            void main() {
-	                // Set a constant depth value (z-coordinate)
-	                vec4 pos = projectionMatrix * modelViewMatrix * vec4(position.xy, 0.0, 1.0);
+let target;
+let gameCamera;
  
-	                gl_Position = pos;
-	            }
-	        `,
-	        fragmentShader: `
-	            precision mediump float;
-	            uniform vec3 color;
-	            uniform float time;
+let projectionMatrixKey;
+let matrixWorldKey;
  
-	            void main() {
-	                // Create a dynamic pattern using time and trigonometric functions
-	                float r = 0.8 + 0.2 * sin(time + gl_FragCoord.x * 0.1);
-	                float g = 0.8 + 0.2 * sin(time + gl_FragCoord.y * 0.1);
-	                float b = 0.8 + 0.2 * cos(time * 0.5);
+WeakMap.prototype.set = new Proxy( WeakMap.prototype.set, {
+    apply( target, thisArgs, [ object ] ) {
  
-	                gl_FragColor = vec4(color * vec3(r, g, b), 1.0);
-	            }
-	        `,
-	        uniforms: {
-	            color: { value: color },
-	            time: { value: 0.0 }
-	        }
-	    });
-	}
+        if ( object && typeof object === 'object' ) {
  
+            if ( object.hasOwnProperty( 'fog' ) && ! object.isMyScene ) checkScene( object );
  
+            if ( typeof object.aspect === 'number' && object !== camera ) {
  
-	let target;
-	let gameCamera;
+                for ( const key in object ) {
  
-	WeakMap.prototype.set = new Proxy( WeakMap.prototype.set, {
-		apply( target, thisArgs, [ object ] ) {
+                    const value = object[ key ];
+                    if ( value && typeof value === 'object' && 
+                        Array.isArray( value.elements ) && value.elements[ 11 ] === - 1 ) {
  
-			if ( object && typeof object === 'object' ) {
+                        projectionMatrixKey = key;
  
-				if ( object.hasOwnProperty( 'fog' ) && ! object.isMyScene ) checkScene( object );
+                    } else if ( typeof value === 'function' ) {
  
-				if ( typeof object.aspect === 'number' && object !== camera ) {
+                        const match = /=this\['([^']+)'\]\['elements'\];/.exec( value.toString() );
+                        if ( match ) {
  
-					object.projectionMatrix = new Proxy( object.projectionMatrix, {
-						get() {
+                            matrixWorldKey = match[ 1 ];
  
-							setTransform( camera, object );
-							camera.near = object.near;
-							camera.far = object.far;
-							camera.aspect = object.aspect;
-							camera.fov = object.fov;
-							camera.updateProjectionMatrix();
+                        }
  
-							gameCamera = object;
+                    }
  
-							return Reflect.get( ...arguments );
+                }
  
-						}
-					} );
+                console.log( { projectionMatrixKey, matrixWorldKey } );
  
-				}
+                object[ projectionMatrixKey ] = new Proxy( object[ projectionMatrixKey ], {
+                    get() {
  
-			}
+                        setTransform( camera, object );
+                        camera.near = object.near;
+                        camera.far = object.far;
+                        camera.aspect = object.aspect;
+                        camera.fov = object.fov;
+                        camera.updateProjectionMatrix();
  
-			return Reflect.apply( ...arguments );
+                        gameCamera = object;
  
-		}
-	} );
+                        return Reflect.get( ...arguments );
  
-	function setTransform( targetObject, sourceObject ) {
+                    }
+                } );
  
-		const matrix = new THREE.Matrix4().fromArray( sourceObject.matrixWorld.toArray() );
-		matrix.decompose( targetObject.position, targetObject.quaternion, targetObject.scale );
+            }
  
-	}
+        }
  
-	let worldScene;
-	let childrenKey;
+        return Reflect.apply( ...arguments );
  
-	function checkScene( scene ) {
+    }
+} );
  
-		for ( const key in scene ) {
+function setTransform( targetObject, sourceObject ) {
  
-			const children = scene[ key ];
+    const matrix = new THREE.Matrix4().fromArray( sourceObject[ matrixWorldKey ].elements );
+    matrix.decompose( targetObject.position, targetObject.quaternion, targetObject.scale );
  
-			if ( Array.isArray( children ) && children.length === 9 ) {
+}
  
-				for ( const child of children ) {
+let worldScene;
+let childrenKey;
  
-					if ( typeof child !== 'object' || ! child.hasOwnProperty( 'uuid' ) ) return;
+function checkScene( scene ) {
  
-				}
+    for ( const key in scene ) {
  
-				worldScene = scene;
-				childrenKey = key;
-				console.log( { worldScene, childrenKey } );
-				return;
+        const children = scene[ key ];
  
-			}
+        if ( Array.isArray( children ) && children.length === 9 ) {
  
-		}
+            for ( const child of children ) {
  
-	}
+                if ( typeof child !== 'object' || ! child.hasOwnProperty( 'uuid' ) ) return;
  
-	function isBlock( entity ) {
+            }
  
-		try {
+            worldScene = scene;
+            childrenKey = key;
+            console.log( { worldScene, childrenKey } );
+            return;
  
-			const mesh = entity[ childrenKey ][ 0 ];
-			return mesh.geometry.index.count === 36;
+        }
  
-		} catch {
+    }
  
-			return false;
+}
  
-		}
+function isBlock( entity ) {
  
-	}
+    try {
  
-	function isPlayer( entity ) {
+        const mesh = entity[ childrenKey ][ 0 ];
+        return mesh.geometry.index.count === 36;
  
-		try {
+    } catch {
  
-			return entity[ childrenKey ].length > 2 || ! entity[ childrenKey ][ 1 ].geometry;
+        return false;
  
-		} catch {
+    }
  
-			return false;
+}
  
-		}
+function isPlayer( entity ) {
  
-	}
+    try {
  
-	function isEnemy( entity ) {
+        return entity[ childrenKey ].length > 2 || ! entity[ childrenKey ][ 1 ].geometry;
  
-		for ( const child of entity[ childrenKey ] ) {
+    } catch {
  
-			try {
+        return false;
  
-				const image = child.material.map.image;
+    }
  
-				if ( image instanceof HTMLCanvasElement ) {
+}
  
-					entity.username = image.lastText;
-					return false;
+function isEnemy( entity ) {
  
-				}
+    for ( const child of entity[ childrenKey ] ) {
  
-			} catch {}
+        try {
  
-		}
+            const image = child.material.map.image;
  
-		return true;
+            if ( image instanceof HTMLCanvasElement ) {
  
-	}
+                entity.username = image.lastText;
+                return false;
  
-	const chunkMaterial = new THREE.MeshNormalMaterial();
-	const raycaster = new THREE.Raycaster();
-	const direction = new THREE.Vector3();
+            }
  
-	const line = new THREE.LineSegments( new THREE.BufferGeometry(), MyMaterial( colors.enemy ) );
-	line.frustumCulled = false;
-	const linePositions = new THREE.BufferAttribute( new Float32Array(),);
-	line.geometry.setAttribute( 'position', linePositions );
+        } catch {}
  
-	function animate() {
+    }
  
-		window.requestAnimationFrame( animate );
+    return true;
  
-		const now = Date.now();
+}
  
-		const scene = new THREE.Scene();
-		scene.isMyScene = true;
+const chunkMaterial = new THREE.MeshNormalMaterial();
+const raycaster = new THREE.Raycaster();
+const direction = new THREE.Vector3();
  
-		const rawChunks = worldScene[ childrenKey ][ 4 ][ childrenKey ];
-		const chunks = [];
+const line = new THREE.LineSegments( new THREE.BufferGeometry(), MyMaterial( colors.enemy ) );
+line.frustumCulled = false;
+const linePositions = new THREE.BufferAttribute( new Float32Array( 200 * 2 * 3 ), 3 );
+line.geometry.setAttribute( 'position', linePositions );
  
-		for ( const chunk of rawChunks ) {
+function animate() {
  
-			if ( ! chunk.geometry ) continue;
+    window.requestAnimationFrame( animate );
+
  
-			let myChunk = chunk.myChunk;
+    const now = Date.now();
  
-			if ( ! myChunk ) {
+    const scene = new THREE.Scene();
+    scene.isMyScene = true;
  
-				const positionArray = chunk.geometry.attributes.position.array;
-				if ( positionArray.length === 0 ) continue;
+    const rawChunks = worldScene[ childrenKey ][ 4 ][ childrenKey ];
+    const chunks = [];
  
-				const geometry = new THREE.BufferGeometry();
-				geometry.setAttribute(
-					'position',
-					new THREE.BufferAttribute( positionArray, 3 )
-				);
-				geometry.setIndex(
-					new THREE.BufferAttribute( chunk.geometry.index.array, 1 )
-				);
-				geometry.computeVertexNormals();
-				geometry.computeBoundingBox();
+    for ( const chunk of rawChunks ) {
  
-				myChunk = new THREE.Mesh( geometry, chunkMaterial );
-				myChunk.box = new THREE.Box3();
-				chunk.myChunk = myChunk;
+        if ( ! chunk.geometry ) continue;
  
-			}
+        let myChunk = chunk.myChunk;
  
-			if ( chunk.material ) chunk.material.wireframe = settings.worldWireframe;
+        if ( ! myChunk ) {
  
-			setTransform( myChunk, chunk );
-			myChunk.updateMatrixWorld();
-			myChunk.box.copy( myChunk.geometry.boundingBox ).applyMatrix4( myChunk.matrixWorld );
-			chunks.push( myChunk );
+            const positionArray = chunk.geometry.attributes.position.array;
+            if ( positionArray.length === 0 ) continue;
  
-		}
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute( 
+                'position', 
+                new THREE.BufferAttribute( positionArray, 3 ) 
+            );
+            geometry.setIndex( 
+                new THREE.BufferAttribute( chunk.geometry.index.array, 1 ) 
+            );
+            geometry.computeVertexNormals();
+            geometry.computeBoundingBox();
  
-		chunks.sort( ( a, b ) => {
+            myChunk = new THREE.Mesh( geometry, chunkMaterial );
+            myChunk.box = new THREE.Box3();
+            chunk.myChunk = myChunk;
  
-			return camera.position.distanceTo( a.position ) - camera.position.distanceTo( b.position );
+        }
  
-		} );
+        if ( chunk.material ) chunk.material.wireframe = settings.worldWireframe;
  
-		let lineCounter = 0;
-		const lineOrigin = camera.localToWorld( new THREE.Vector3( 0, 4, - 10 ) );
+        setTransform( myChunk, chunk );
+        myChunk.updateMatrixWorld();
+        myChunk.box.copy( myChunk.geometry.boundingBox ).applyMatrix4( myChunk.matrixWorld );
+        chunks.push( myChunk );
  
-		const entities = worldScene[ childrenKey ][ 5 ][ childrenKey ];
+    }
  
-		let targetPlayer;
-		let minDistance = Infinity;
+    chunks.sort( ( a, b ) => {
  
-		for ( let i = 0; i < entities.length; i ++ ) {
+        return camera.position.distanceTo( a.position ) - camera.position.distanceTo( b.position );
  
-			const entity = entities[ i ];
-			if ( entity[ childrenKey ].length === 0 ) continue;
+    } );
  
-			if ( ! entity.myContainer ) {
+    let lineCounter = 0;
+    const lineOrigin = camera.localToWorld( new THREE.Vector3( 0, 4, - 10 ) );
  
-				entity.myContainer = new THREE.Object3D();
-				entity.discoveredAt = now;
+    const entities = worldScene[ childrenKey ][ 5 ][ childrenKey ];
  
-			}
+    let targetPlayer;
+    let minDistance = Infinity;
  
-			if ( now - entity.discoveredAt < 500 ) continue;
+    for ( let i = 0; i < entities.length; i ++ ) {
  
-			if ( ! entity.myBox ) {
+        const entity = entities[ i ];
+        if ( entity[ childrenKey ].length === 0 ) continue;
  
-				const box = new THREE.LineSegments( geometry );
+        if ( ! entity.myContainer ) {
  
-				if ( isPlayer( entity ) ) {
+            entity.myContainer = new THREE.Object3D();
+            entity.discoveredAt = now;
  
-					entity.isPlayer = true;
-					entity.isEnemy = isEnemy( entity );
-					box.material = MyMaterial( entity.isEnemy ? colors.enemy : colors.team );
-					box.scale.set( 0.5, 1.25, 0.5 );
+        }
  
-				} else {
+        if ( now - entity.discoveredAt < 500 ) continue;
  
-					entity.isBlock = isBlock( entity );
-					box.material = MyMaterial( entity.isBlock ? colors.block : colors.item );
-					box.scale.setScalar( 0.25, 0.1, 0.25 );
+        if ( ! entity.myBox ) {
  
-					if ( ! entity.isBlock ) {
+            const box = new THREE.LineSegments( geometry );
  
-						const sprite = createSprite( entity.name, colors.item.rawColor );
-						sprite.position.y = sprite.scale.y + 0.2;
-						entity.myContainer.add( sprite );
-						entity.mySprite = sprite;
+            if ( isPlayer( entity ) ) {
  
-					}
+                entity.isPlayer = true;
+                entity.isEnemy = isEnemy( entity );
+                box.material = MyMaterial( entity.isEnemy ? colors.enemy : colors.team );
+                box.scale.set( 0.5, 1.25, 0.5 );
  
-				}
+            } else {
  
-				entity.myBox = box;
-				entity.myContainer.add( entity.myBox );
+                entity.isBlock = isBlock( entity );
+                box.material = MyMaterial( entity.isBlock ? colors.block : colors.item );
+                box.scale.setScalar( 0.25, 0.1, 0.25 );
  
-			}
+                if ( ! entity.isBlock ) {
  
-			if ( entity.isPlayer ) {
+                    const sprite = createSprite( entity.name, colors.item.rawColor );
+                    sprite.position.y = sprite.scale.y + 0.2;
+                    entity.myContainer.add( sprite );
+                    entity.mySprite = sprite;
  
-				entity.myBox.visible = settings.showPlayers;
+                }
  
-			} else if ( entity.isBlock ) {
+            }
  
-				entity.myBox.visible = settings.showBlocks;
+            entity.myBox = box;
+            entity.myContainer.add( entity.myBox );
  
-			} else {
+        }
  
-				entity.myBox.visible = settings.showItems;
-				entity.mySprite.visible = settings.showItemNames;
+        if ( entity.isPlayer ) {
  
-			}
+            entity.myBox.visible = settings.showPlayers;
  
-			if ( typeof entity.visible === 'boolean' && ! entity.visible ) continue;
+        } else if ( entity.isBlock ) {
  
-			setTransform( entity.myContainer, entity );
-			scene.add( entity.myContainer );
+            entity.myBox.visible = settings.showBlocks;
  
-			if ( ! entity.isPlayer ) continue;
+        } else {
  
-			const isBlacklisted = typeof entity.username === 'string' && aimbotBlacklist[ entity.username.toLowerCase() ];
-			const isAimbotTarget = ! isBlacklisted && ( settings.aimAtEveryone || entity.isEnemy );
+            entity.myBox.visible = settings.showItems;
+            entity.mySprite.visible = settings.showItemNames;
  
-			if ( isAimbotTarget ) {
+        }
  
-				linePositions.setXYZ( lineCounter ++, lineOrigin.x, lineOrigin.y, lineOrigin.z );
-				const p = entity.myContainer.position;
-				linePositions.setXYZ( lineCounter ++, p.x, p.y + 1.25, p.z );
+        if ( typeof entity.visible === 'boolean' && ! entity.visible ) continue;
  
-			}
+        setTransform( entity.myContainer, entity );
+        scene.add( entity.myContainer );
  
-			if ( isAimbotTarget !== entity.wasAimbotTarget ) {
+        if ( ! entity.isPlayer ) continue;
  
-				updatePlayerColors( entity, isAimbotTarget );
-				entity.wasAimbotTarget = isAimbotTarget;
+        const isBlacklisted = typeof entity.username === 'string' && aimbotBlacklist[ entity.username.toLowerCase() ];
+        const isAimbotTarget = ! isBlacklisted && ( settings.aimAtEveryone || entity.isEnemy );
  
-			}
+        if ( isAimbotTarget ) {
  
-			if ( entity.usernameSprite ) entity.usernameSprite.visible = settings.showPlayerNames;
+            linePositions.setXYZ( lineCounter ++, lineOrigin.x, lineOrigin.y, lineOrigin.z );
+            const p = entity.myContainer.position;
+            linePositions.setXYZ( lineCounter ++, p.x, p.y + 1.25, p.z );
  
-			//
+        }
  
-			const shouldExecuteAimbot = settings.aimbotEnabled && ( ! settings.aimbotOnRightMouse || isRightDown );
+        if ( isAimbotTarget !== entity.wasAimbotTarget ) {
  
-			if ( ! shouldExecuteAimbot || ! gameCamera || typeof gameCamera.lookAt !== 'function' ) continue;
+            updatePlayerColors( entity, isAimbotTarget );
+            entity.wasAimbotTarget = isAimbotTarget;
  
-			if ( isAimbotTarget && now - entity.discoveredAt > 2000 ) aimbot: {
+        }
  
-				const entPos = entity.myContainer.position.clone();
-				entPos.y += settings.aimHeight;
-				if ( Math.hypot( entPos.x - camera.position.x, entPos.z - camera.position.z ) > 1 ) {
+        if ( entity.usernameSprite ) entity.usernameSprite.visible = settings.showPlayerNames;
  
-					const distance = camera.position.distanceTo( entPos );
+        //
  
-					if ( distance < minDistance ) {
+        const shouldExecuteAimbot = settings.aimbotEnabled && ( ! settings.aimbotOnRightMouse || isRightDown );
  
-						if ( ! settings.aimBehindWalls ) {
+        if ( ! shouldExecuteAimbot || ! gameCamera ) continue;
  
-							direction.subVectors( entPos, camera.position ).normalize();
-							raycaster.set( camera.position, direction );
+        if ( isAimbotTarget && now - entity.discoveredAt > 2000 ) aimbot: {
  
-							for ( const chunk of chunks ) {
+            const entPos = entity.myContainer.position.clone();
+            entPos.y += settings.aimHeight;
+            if ( Math.hypot( entPos.x - camera.position.x, entPos.z - camera.position.z ) > 1 ) {
  
-								if ( ! raycaster.ray.intersectsBox( chunk.box ) ) continue;
+                const distance = camera.position.distanceTo( entPos );
  
-								const hit = raycaster.intersectObject( chunk )[ 0 ];
-								if ( hit && hit.distance < distance ) break aimbot;
+                if ( distance < minDistance ) {
  
-							}
+                    if ( ! settings.aimBehindWalls ) {
  
-						}
+                        direction.subVectors( entPos, camera.position ).normalize();
+                        raycaster.set( camera.position, direction );
  
-						targetPlayer = entity;
-						minDistance = distance;
+                        for ( const chunk of chunks ) {
  
-					}
+                            if ( ! raycaster.ray.intersectsBox( chunk.box ) ) continue;
  
-				}
+                            const hit = raycaster.intersectObject( chunk )[ 0 ];
+                            if ( hit && hit.distance < distance ) break aimbot;
  
-			}
+                        }
  
-		}
+                    }
  
-		if ( targetPlayer ) {
+                    targetPlayer = entity;
+                    minDistance = distance;
  
-			const p = targetPlayer.myContainer.position;
-			gameCamera.lookAt( p.x, p.y + settings.aimHeight, p.z );
+                }
  
-			if ( settings.autoFire ) setFire( true );
+            }
  
-		} else {
+        }
  
-			setFire( false );
+    }
  
-		}
+    if ( targetPlayer ) {
  
-		if ( settings.showLines ) {
+        const p = targetPlayer.myContainer.position;
+        lookAt( gameCamera, p.x, p.y + settings.aimHeight, p.z );
  
-			linePositions.needsUpdate = true;
-			line.geometry.setDrawRange( 0, lineCounter );
-			scene.add( line );
+        if ( settings.autoFire ) setFire( true );
  
-		}
+    } else {
  
-		renderer.render( scene, camera );
+        setFire( false );
  
-	}
+    }
  
-	function updatePlayerColors( entity, isAimbotTarget ) {
+    if ( settings.showLines ) {
  
-		const color = isAimbotTarget ? colors.enemy : colors.team;
-		entity.myBox.material.uniforms.color.value = color;
+        linePositions.needsUpdate = true;
+        line.geometry.setDrawRange( 0, lineCounter );
+        scene.add( line );
  
-		if ( entity.usernameSprite ) {
+    }
  
-			entity.myContainer.remove( entity.usernameSprite );
-			entity.usernameSprite = null;
+    renderer.render( scene, camera );
  
-		}
+}
  
-		if ( entity.username ) {
+function lookAt( object, x, y, z ) {
  
-			const sprite = createSprite( entity.username, color.rawColor );
-			sprite.position.y = sprite.scale.y + 1.25;
-			entity.myContainer.add( sprite );
-			entity.usernameSprite = sprite;
+    const dummy = new THREE.PerspectiveCamera();
  
-		}
+    setTransform( dummy, object );
+    dummy.lookAt( x, y, z );
  
-	}
+    object.rotation.set( 
+        dummy.rotation.x, 
+        dummy.rotation.y, 
+        dummy.rotation.z, 
+        dummy.rotation.order 
+    );
  
-	function createSprite( text, bgColor = '#000' ) {
+}
  
-		const fontSize = 40;
-		const strokeSize = 10;
-		const font = 'normal ' + fontSize + 'px Arial';
+function updatePlayerColors( entity, isAimbotTarget ) {
  
-		const canvas = document.createElement( 'canvas' );
-		const ctx = canvas.getContext( '2d' );
+    const color = isAimbotTarget ? colors.enemy : colors.team;
+    entity.myBox.material.uniforms.color.value = color;
  
-		ctx.font = font;
-		canvas.width = ctx.measureText( text ).width + strokeSize * 2;
-		canvas.height = fontSize + strokeSize * 2;
+    if ( entity.usernameSprite ) {
  
-		ctx.fillStyle = bgColor;
-		ctx.fillRect( 0, 0, canvas.width, canvas.height );
+        entity.myContainer.remove( entity.usernameSprite );
+        entity.usernameSprite = null;
  
-		ctx.font = font;
-		ctx.fillStyle = 'white';
-		ctx.textBaseline = 'top';
-		ctx.textAlign = 'left';
-		ctx.lineWidth = strokeSize;
-		ctx.strokeText( text, strokeSize, strokeSize );
-		ctx.fillText( text, strokeSize, strokeSize );
+    }
  
-		const material = new THREE.SpriteMaterial( {
-			map: new THREE.CanvasTexture( canvas ),
-			sizeAttenuation: false,
-			fog: false,
-			depthTest: false,
-			depthWrite: false
-		} );
-		const sprite = new THREE.Sprite( material );
-		sprite.center.y = 0;
+    if ( entity.username ) {
+        
+        const sprite = createSprite( entity.username, color.rawColor );
+        sprite.position.y = sprite.scale.y + 1.25;
+        entity.myContainer.add( sprite );
+        entity.usernameSprite = sprite;
  
-		sprite.scale.y = 0.035;
-		sprite.scale.x = sprite.scale.y * canvas.width / canvas.height;
+    }
  
-		return sprite;
+}
  
-	}
+function createSprite( text, bgColor = '#000' ) {
  
-	let lastFireStatus = false;
-	function setFire( bool ) {
+    const fontSize = 40;
+    const strokeSize = 10;
+    const font = 'normal ' + fontSize + 'px Arial';
  
-		if ( lastFireStatus === bool ) return;
-		lastFireStatus = bool;
+    const canvas = document.createElement( 'canvas' );
+    const ctx = canvas.getContext( '2d' );
  
-		const type = bool ? 'mousedown' : 'mouseup';
-		document.dispatchEvent( new MouseEvent( type, { button: 2 } ) );
-		document.dispatchEvent( new MouseEvent( type, { button: 0 } ) );
+    ctx.font = font;
+    canvas.width = ctx.measureText( text ).width + strokeSize * 2;
+    canvas.height = fontSize + strokeSize * 2;
  
-	}
+    ctx.fillStyle = bgColor;
+    ctx.fillRect( 0, 0, canvas.width, canvas.height );
  
-	window.requestAnimationFrame( animate );
+    ctx.font = font;
+    ctx.fillStyle = 'white';
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    ctx.lineWidth = strokeSize;
+    ctx.strokeText( text, strokeSize, strokeSize );
+    ctx.fillText( text, strokeSize, strokeSize );
  
-	const value = parseInt( new URLSearchParams( window.location.search ).get( 'showAd' ), 16 );
+    const material = new THREE.SpriteMaterial( {
+        map: new THREE.CanvasTexture( canvas ),
+        sizeAttenuation: false,
+        fog: false,
+        depthTest: false,
+        depthWrite: false
+    } );
+    const sprite = new THREE.Sprite( material );
+    sprite.center.y = 0;
  
-	const el = document.createElement( 'div' );
+    sprite.scale.y = 0.035;
+    sprite.scale.x = sprite.scale.y * canvas.width / canvas.height;
  
-	el.innerHTML = `<style>
+    return sprite;
  
-	.dialog {
-	    position: absolute;
-	    left: 50%;
-	    top: 50%;
-	    padding: 20px;
-	    background: rgb(4, 7, 16);
-	    border: 6px solid rgba(0, 0, 0, 0.2);
-	    color: #fff;
-	    transform: translate(-50%, -50%);
-	    box-shadow: 0 0 0 10000px rgba(0, 0, 0, 0.3);
-	    text-align: center;
-	    z-index: 999999;
-	    width: 45%;
-	    height: 60%;
-	    border-radius: 10px;
-	}
+}
  
-	.dialog * {
-		color: #fff;
-	}
+let lastFireStatus = false;
+function setFire( bool ) {
  
-	.close {
-		position: absolute;
-		right: 5px;
-		top: 5px;
-		width: 20px;
-		height: 20px;
-		opacity: 0.5;
-		cursor: pointer;
-	}
+    if ( lastFireStatus === bool ) return;
+    lastFireStatus = bool;
  
-	.close:before, .close:after {
-		content: ' ';
-		position: absolute;
-		left: 50%;
-		top: 50%;
-		width: 100%;
-		height: 20%;
-		transform: translate(-50%, -50%) rotate(-45deg);
-		background: #fff;
-	}
+    const type = bool ? 'mousedown' : 'mouseup';
+    document.dispatchEvent( new MouseEvent( type, { button: 2 } ) );
+    document.dispatchEvent( new MouseEvent( type, { button: 0 } ) );
  
-	.close:after {
-		transform: translate(-50%, -50%) rotate(45deg);
-	}
+}
  
-	.close:hover {
-		opacity: 1;
-	}
+window.requestAnimationFrame( animate );
  
-	.dialog .btn {
-		cursor: pointer;
-		padding: 0.5em;
-		background: hsl(174.05deg 67% 44% / 74%);
-		border: 3px solid rgba(0, 0, 0, 0.2);
-	}
+const value = parseInt( new URLSearchParams( window.location.search ).get( 'showAd' ), 16 );
  
-	.dialog .btn:active {
-		transform: scale(0.8);
-	}
+const el = document.createElement( 'div' );
  
+el.innerHTML = `<style>
  
+    .dialog {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        padding: 20px;
+        background: rgb(4, 7, 16);
+        border: 6px solid rgba(0, 0, 0, 0.2);
+        color: #fff;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 0 0 10000px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        z-index: 999999;
+        width: 45%;
+        height: 60%;
+        border-radius: 10px;
+    }
  
-	@keyframes msg {
-		from {
-			transform: translate(-120%, 0);
-		}
+    .dialog * {
+        color: #fff;
+    }
  
-		to {
-			transform: none;
-		}
-	}
+    .close {
+        position: absolute;
+        right: 5px;
+        top: 5px;
+        width: 20px;
+        height: 20px;
+        opacity: 0.5;
+        cursor: pointer;
+    }
  
-	#overlayCanvas {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		pointer-events: none;
-	}
+    .close:before, .close:after {
+        content: ' ';
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 100%;
+        height: 20%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        background: #fff;
+    }
  
-	.lil-gui {
-	    --title-background-color: #030717 !important;
-	    --hover-color: #ffffff !important;
-	    --background-color: #02060e !important;
-	    --widget-color: #2b3059 !important;
-	}
-	.lil-gui.root.allow-touch-styles.autoPlace {
-	    border-radius: 6px !important;
-	}
+    .close:after {
+        transform: translate(-50%, -50%) rotate(45deg);
+    }
  
-	.my-lil-gui-desc {
-		font-size: 0.8em;
-		opacity: 0.8;
-		max-width: 100px;
-		line-height: 1;
-		white-space: normal !important;
-	}
+    .close:hover {
+        opacity: 1;
+    }
  
+    .dialog .btn {
+        cursor: pointer;
+        padding: 0.5em;
+        background: hsl(174.05deg 67% 44% / 74%);
+        border: 3px solid rgba(0, 0, 0, 0.2);
+    }
  
+    .dialog .btn:active {
+        transform: scale(0.8);
+    }
  
-	</style>
-	<div class="dialog" id="dialogcontrol"><div class="close" onclick="this.parentNode.style.display='none';"></div>
-	<img src="https://i.imgur.com/P77vcpI.png" alt="BY FOCHOMOCHO">
-	<div style="overflow: auto; text-align: justify;">
-	  <p style="display: inline-block; color: lightgreen; margin-right: 10px;">Status: <span style="color: lightgreen;">Working</span></p>
-	  <p style="display: inline-block; width: 100%;">V1.0.1</p>
-	</div>
  
-	  <div style="display: flex; flex-wrap: wrap; justify-content: center;">
-	 
-	  <div style="border: 1px solid lightgreen; padding: 10px; margin-right: 10px; display: flex; align-items: center;">
-	      <img src="https://i.imgur.com/4tFnsO9.png" alt="[B]" style="height: 20px; width: 20px; margin-right: 10px;">
-	      <p id="aimbot" style="color: lightgreen; margin: 0;">Aimbot</p>
-	  </div>
-	 
-	  <div style="border: 1px solid lightgreen; padding: 10px; margin-right: 10px; display: flex; align-items: center;">
-	      <img src="https://i.imgur.com/pIaF8kH.png" alt="[V]" style="height: 20px; width: 20px; margin-right: 10px;">
-	      <p id="esp" style="color: lightgreen; margin: 0;">ESP</p>
-	  </div>
-	 
-	</div>
-	<br>
-	<div style="display: flex; flex-wrap: wrap; justify-content: center;">
-	 
-	  <div style="border: 1px solid lightgreen; padding: 10px; margin-right: 10px; display: flex; align-items: center;">
-	      <img src="https://i.imgur.com/oIStPY3.png" alt="[N]" style="height: 20px; width: 20px; margin-right: 10px;">
-	      <p id="line" style="color: lightgreen; margin: 0;">Lines</p>
-	  </div>
-	 
-	  <div style="border: 1px solid lightgreen; padding: 10px; display: flex; align-items: center;">
-	      <img src="https://i.imgur.com/lbEgxGX.png" alt="[L]" style="height: 20px; width: 20px; margin-right: 10px;">
-	      <p id="em" style="color: lightgreen; margin: 0;">Right mouse Aimbot</p>
-	  </div>
-	 
-	</div>
  
-	 <p id="line" style="color: lightgreen; margin: 0;">[L] to show/hide blocks</p>
-	  <p id="em" style="color: lightgreen; margin: 0;">[H] to toggle aimbot auto fire.</p>
-	<div style="display: flex; flex-wrap: wrap; justify-content: center;">
-	 
-	  <div style="padding: 10px; margin-right: 10px; display: flex; align-items: center;">
-	      
-	      <p id="line" style="color: lightgreen; margin: 0;">[/] to toggle control panel.<br></p>
-	  </div>
-	 
-	  <div style="padding: 10px; display: flex; align-items: center;">
-	      <p id="em" style="color: lightgreen; margin: 0;">[;] to toggle wireframe.</p>
-	  </div>
-	  <div style="padding: 10px; display: flex; align-items: center;">
-	      <p id="em" style="margin: 0;">[K] Hide & Show</p>
-	  </div>
+    @keyframes msg {
+        from {
+            transform: translate(-120%, 0);
+        }
  
-	</div>
-		<small>NOTE: If you get low FPS with aimbot <br>then enable "Aim Behind Walls"</small>
-		<br>
+        to {
+            transform: none;
+        }
+    }
  
-	<p>Consider joining my <u><a href="https://discord.gg/vt3S7NrQRk" target="_blank" style="color: #3072db;">Discord</a></u> for regular updates. This script may go down due to third-party actions.</p>
-		<br>
-		<div style="">
-			<div class="btn" onclick="window.open('https://discord.gg/K24Zxy88VM', '_blank')">Discord</div>
-		</div>
+    #overlayCanvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+    }
  
-		<img src="https://i.imgur.com/hpcqGTm.gif" alt="Connection Issue Occurred!" style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); border-radius: 10px; width: 50%; height: auto; z-index: 99999999999; margin-bottom: -15%;">
+    .lil-gui {
+        --title-background-color: #030717 !important;
+        --hover-color: #ffffff !important;
+        --background-color: #02060e !important;
+        --widget-color: #2b3059 !important;
+    }
+    .lil-gui.root.allow-touch-styles.autoPlace {
+        border-radius: 6px !important;
+    }
  
+    .my-lil-gui-desc {
+        font-size: 0.8em;
+        opacity: 0.8;
+        max-width: 100px;
+        line-height: 1;
+        white-space: normal !important;
+    }
  
  
-	</div>
  
-	<div class="msg" style="display: none;"></div>`;
+    </style>
+    <div class="dialog" id="dialogcontrol"><div class="close" onclick="this.parentNode.style.display='none';"></div>
+    <img src="https://i.imgur.com/P77vcpI.png" alt="BY FOCHOMOCHO">
+    <div style="overflow: auto; text-align: justify;">
+      <p style="display: inline-block; color: lightgreen; margin-right: 10px;">Status: <span style="color: lightgreen;">Working</span></p>
+      <p style="display: inline-block; width: 100%;">V1.0.1</p>
+    </div>
  
-	const msgEl = el.querySelector( '.msg' );
-	const dialogEl = el.querySelector( '.dialog' );
+      <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+     
+      <div style="border: 1px solid lightgreen; padding: 10px; margin-right: 10px; display: flex; align-items: center;">
+          <img src="https://i.imgur.com/4tFnsO9.png" alt="[B]" style="height: 20px; width: 20px; margin-right: 10px;">
+          <p id="aimbot" style="color: lightgreen; margin: 0;">Aimbot</p>
+      </div>
+     
+      <div style="border: 1px solid lightgreen; padding: 10px; margin-right: 10px; display: flex; align-items: center;">
+          <img src="https://i.imgur.com/pIaF8kH.png" alt="[V]" style="height: 20px; width: 20px; margin-right: 10px;">
+          <p id="esp" style="color: lightgreen; margin: 0;">ESP</p>
+      </div>
+     
+    </div>
+    <br>
+    <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+     
+      <div style="border: 1px solid lightgreen; padding: 10px; margin-right: 10px; display: flex; align-items: center;">
+          <img src="https://i.imgur.com/oIStPY3.png" alt="[N]" style="height: 20px; width: 20px; margin-right: 10px;">
+          <p id="line" style="color: lightgreen; margin: 0;">Lines</p>
+      </div>
+     
+      <div style="border: 1px solid lightgreen; padding: 10px; display: flex; align-items: center;">
+          <img src="https://i.imgur.com/lbEgxGX.png" alt="[L]" style="height: 20px; width: 20px; margin-right: 10px;">
+          <p id="em" style="color: lightgreen; margin: 0;">Right mouse Aimbot</p>
+      </div>
+     
+    </div>
  
-	function addElements() {
+     <p id="line" style="color: lightgreen; margin: 0;">[L] to show/hide blocks</p>
+      <p id="em" style="color: lightgreen; margin: 0;">[H] to toggle aimbot auto fire.</p>
+    <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+     
+      <div style="padding: 10px; margin-right: 10px; display: flex; align-items: center;">
+          
+          <p id="line" style="color: lightgreen; margin: 0;">[/] to toggle control panel.<br></p>
+      </div>
+     
+      <div style="padding: 10px; display: flex; align-items: center;">
+          <p id="em" style="color: lightgreen; margin: 0;">[;] to toggle wireframe.</p>
+      </div>
+      <div style="padding: 10px; display: flex; align-items: center;">
+          <p id="em" style="margin: 0;">[K] Hide & Show</p>
+      </div>
  
-		while ( el.children.length > 0 ) {
+    </div>
+        <small>NOTE: If you get low FPS with aimbot <br>then enable "Aim Behind Walls"</small>
+        <br>
  
-			document.body.appendChild( el.children[ 0 ] );
+    <p>Consider joining my <u><a href="https://discord.gg/vt3S7NrQRk" target="_blank" style="color: #3072db;">Discord</a></u> for regular updates. This script may go down due to third-party actions.</p>
+        <br>
+        <div style="">
+            <div class="btn" onclick="window.open('https://discord.gg/K24Zxy88VM', '_blank')">Discord</div>
+        </div>
  
-		}
+        <img src="https://i.imgur.com/hpcqGTm.gif" alt="Connection Issue Occurred!" style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); border-radius: 10px; width: 50%; height: auto; z-index: 99999999999; margin-bottom: -15%;">
  
-		document.body.appendChild( renderer.domElement );
  
-	}
  
-	function tryToAddElements() {
+    </div>
  
-		if ( document.body ) {
+    <div class="msg" style="display: none;"></div>`;
  
-			addElements();
-			return;
+const msgEl = el.querySelector( '.msg' );
+const dialogEl = el.querySelector( '.dialog' );
  
-		}
+function addElements() {
  
-		setTimeout( tryToAddElements, 100 );
+    while ( el.children.length > 0 ) {
  
-	}
+        document.body.appendChild( el.children[ 0 ] );
  
-	tryToAddElements();
+    }
  
-	function toggleSetting( key ) {
+    document.body.appendChild( renderer.domElement );
  
-		settings[ key ] = ! settings[ key ];
-		showMsg( fromCamel( key ), settings[ key ] );
+}
  
-	}
+function tryToAddElements() {
  
-	const keyToSetting = {
-		'KeyV': 'showPlayers',
-		'KeyI': 'showItems',
-		'KeyN': 'showItemNames',
-		'KeyL': 'showBlocks',
-		'KeyB': 'aimbotEnabled',
-		'KeyT': 'aimbotOnRightMouse',
-		'KeyK': 'autoFire',
-		'Semicolon': 'worldWireframe',
-		'Comma': 'showOres'
-	};
+    if ( document.body ) {
  
-	window.addEventListener( 'keyup', function ( event ) {
+        addElements();
+        return;
  
-		if ( document.activeElement.value !== undefined ) return;
+    }
  
-		if ( keyToSetting[ event.code ] ) {
+    setTimeout( tryToAddElements, 100 );
  
-			toggleSetting( keyToSetting[ event.code ] );
+}
  
-		}
+tryToAddElements();
  
-		switch ( event.code ) {
+function toggleSetting( key ) {
  
-			case 'KeyH':
-				dialogEl.style.display = dialogEl.style.display === '' ? 'none' : '';
-				break;
+    settings[ key ] = ! settings[ key ];
+    showMsg( fromCamel( key ), settings[ key ] );
  
-			case 'Slash' :
-				gui._hidden ? gui.show() : gui.hide();
-				break;
+}
  
-		}
+const keyToSetting = {
+    'KeyV': 'showPlayers', 
+    'KeyI': 'showItems', 
+    'KeyN': 'showItemNames', 
+    'KeyL': 'showBlocks', 
+    'KeyB': 'aimbotEnabled', 
+    'KeyT': 'aimbotOnRightMouse', 
+    'KeyK': 'autoFire',
+    'Semicolon': 'worldWireframe',
+    'Comma': 'showOres'
+};
  
-	} );
+window.addEventListener( 'keyup', function ( event ) {
  
-	function showMsg( name, bool ) {
+    if ( document.activeElement.value !== undefined ) return;
  
-		msgEl.innerText = name + ': ' + ( bool ? 'ON' : 'OFF' );
+    if ( keyToSetting[ event.code ] ) {
  
-		msgEl.style.display = 'none';
-		void msgEl.offsetWidth;
-		msgEl.style.display = '';
+        toggleSetting( keyToSetting[ event.code ] );
  
-	}
+    }
+ 
+    switch ( event.code ) {
+ 
+        case 'KeyH':
+            settings.showHelp();
+            break;
+ 
+        case 'Slash' :
+            gui._hidden ? gui.show() : gui.hide();
+            break;
+ 
+    }
+ 
+} );
+ 
+function showMsg( name, bool ) {
+ 
+    msgEl.innerText = name + ': ' + ( bool ? 'ON' : 'OFF' );
+ 
+    msgEl.style.display = 'none';
+    void msgEl.offsetWidth;
+    msgEl.style.display = '';
+ 
+}
