@@ -11,60 +11,63 @@
 // @require      https://unpkg.com/three@0.150.0/build/three.min.js
 // @require      https://cdn.jsdelivr.net/npm/lil-gui@0.19
 // ==/UserScript==
+ 
 const THREE = window.THREE;
 delete window.THREE;
  
 const settings = {
-    showPlayers: true, 
-    showPlayerNames: true, 
-    showItems: true, 
-    showItemNames: false, 
-    showBlocks: true,
-    showOres: true, 
-    worldWireframe: false, 
-    aimbotEnabled: true, 
-    aimbotOnRightMouse: false, 
-    aimBehindWalls: false, 
-    aimHeight: 0.9, 
-    autoFire: true, 
-    aimAtEveryone: false,
-    editAimbotBlacklist() {
+	showPlayers: true, 
+	showPlayerNames: true, 
+	showItems: true, 
+	showItemNames: false, 
+	showBlocks: true, 
+	showLines: true, 
+	showOres: true, 
+	worldWireframe: false, 
+	aimbotEnabled: true, 
+	aimbotOnRightMouse: false, 
+	aimBehindWalls: false, 
+	aimHeight: 0.9, 
+	autoFire: true, 
+	aimAtEveryone: false,
+	editAimbotBlacklist() {
  
-        const currList = Object.keys( aimbotBlacklist ).join( ', ' );
-        const string = prompt( 'Enter usernames of players for whom aimbot should be disabled.\nSeparated by single comma:', currList );
+		const currList = Object.keys( aimbotBlacklist ).join( ', ' );
+		const string = prompt( 'Enter usernames of players for whom aimbot should be disabled.\nSeparated by single comma:', currList );
  
-        if ( string !== null ) {
+		if ( string !== null ) {
  
-            aimbotBlacklist = {};
-            string.split( ',' )
-                .map( name => name.trim().toLowerCase() )
-                .filter( name => name.length > 0 )
-                .forEach( name => ( aimbotBlacklist[ name ] = true ) );
+			aimbotBlacklist = {};
+			string.split( ',' )
+				.map( name => name.trim().toLowerCase() )
+				.filter( name => name.length > 0 )
+				.forEach( name => ( aimbotBlacklist[ name ] = true ) );
  
-            updateBlacklistBtn();
+			updateBlacklistBtn();
  
-        }
+		}
  
-    }, 
-    showHelp() {
+	}, 
+	showHelp() {
  
-        dialogEl.style.display = dialogEl.style.display === '' ? 'none' : '';
+		dialogEl.style.display = dialogEl.style.display === '' ? 'none' : '';
  
-    }
+	}
 };
  
 let aimbotBlacklist = {
-    'player1': true
+	'player1': true, 
+	'player2': true
 };
  
 function updateBlacklistBtn() {
  
-    let name = 'Edit Aimbot Blacklist';
-    
-    const n = Object.keys( aimbotBlacklist ).length;
-    if ( n > 0 ) name = `${name} (${n} user${n === 1 ? '' : 's'})`;
-    
-    controllers.editAimbotBlacklist.name( name );
+	let name = 'Edit Aimbot Blacklist';
+	
+	const n = Object.keys( aimbotBlacklist ).length;
+	if ( n > 0 ) name = `${name} (${n} user${n === 1 ? '' : 's'})`;
+	
+	controllers.editAimbotBlacklist.name( name );
  
 }
  
@@ -72,7 +75,7 @@ const gui = new lil.GUI();
 const controllers = {};
 for ( const key in settings ) {
  
-    controllers[ key ] = gui.add( settings, key ).name( fromCamel( key ) ).listen();
+	controllers[ key ] = gui.add( settings, key ).name( fromCamel( key ) ).listen();
  
 }
  
@@ -82,29 +85,29 @@ updateBlacklistBtn();
  
 function addDescription( controller, text ) {
  
-    const div = document.createElement( 'div' );
-    div.className = 'my-lil-gui-desc';
-    div.innerText = text;
-    controller.domElement.querySelector( '.name' ).appendChild( div ); 
+	const div = document.createElement( 'div' );
+	div.className = 'my-lil-gui-desc';
+	div.innerText = text;
+	controller.domElement.querySelector( '.name' ).appendChild( div ); 
  
 }
  
 function fromCamel( text ) {
  
-    const result = text.replace( /([A-Z])/g, ' $1' );
-    return result.charAt( 0 ).toUpperCase() + result.slice( 1 );
+	const result = text.replace( /([A-Z])/g, ' $1' );
+	return result.charAt( 0 ).toUpperCase() + result.slice( 1 );
  
 }
  
 let isRightDown = false;
 window.addEventListener( 'mousedown', event => {
  
-    if ( event.button === 2 ) isRightDown = true;
+	if ( event.button === 2 ) isRightDown = true;
  
 } );
 window.addEventListener( 'mouseup', event => {
  
-    if ( event.button === 2 ) isRightDown = false;
+	if ( event.button === 2 ) isRightDown = false;
  
 } );
  
@@ -113,8 +116,8 @@ const geometry = new THREE.EdgesGeometry( new THREE.BoxGeometry( 1, 1, 1 ).trans
 const camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 1000 );
  
 const renderer = new THREE.WebGLRenderer( {
-    alpha: true,
-    antialias: true
+	alpha: true,
+	antialias: true
 } );
  
 renderer.setPixelRatio( window.devicePixelRatio );
@@ -123,118 +126,118 @@ renderer.domElement.id = 'overlayCanvas';
  
 window.addEventListener( 'resize', () => {
  
-    renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.setSize( window.innerWidth, window.innerHeight );
  
 } );
  
 const CTX = CanvasRenderingContext2D.prototype;
 CTX.fillText = new Proxy( CTX.fillText, {
-    apply( target, ctx, [ text ] ) {
+	apply( target, ctx, [ text ] ) {
  
-        ctx.canvas.lastText = text;
+		ctx.canvas.lastText = text;
  
-        return Reflect.apply( ...arguments );
+		return Reflect.apply( ...arguments );
  
-    }
+	}
 } );
  
 const WebGL = WebGLRenderingContext.prototype;
  
 const blocks = [
-    [ 0, 3 ], 
-    [ 1, 3 ], 
-    [ 4, 2 ], 
-    [ 5, 2 ], 
-    [ 7, 3 ], 
+	[ 0, 3 ], 
+	[ 1, 3 ], 
+	[ 4, 2 ], 
+	[ 5, 2 ], 
+	[ 7, 3 ], 
  
-    [ 2, 2 ], 
+	[ 2, 2 ], 
  
-    [ 0, 4 ], [ 1, 4 ], [ 2, 4 ], 
-    [ 0, 5 ], [ 1, 5 ], [ 2, 5 ], 
-    [ 0, 6 ], [ 1, 6 ], [ 2, 6 ]
+	[ 0, 4 ], [ 1, 4 ], [ 2, 4 ], 
+	[ 0, 5 ], [ 1, 5 ], [ 2, 5 ], 
+	[ 0, 6 ], [ 1, 6 ], [ 2, 6 ]
 ];
 const blockCheck = blocks.map( ( [ x, y ] ) => `( p.x == ${x.toFixed( 1 )} && p.y == ${y.toFixed( 1 )} )` ).join( ' || ' );
  
 WebGL.shaderSource = new Proxy( WebGL.shaderSource, {
-    apply( target, thisArgs, args ) {
+	apply( target, thisArgs, args ) {
  
-        let [ shader, src ] = args;
+		let [ shader, src ] = args;
  
-        if ( src.indexOf( 'vRealUv = realUv;' ) > - 1 ) {
-                
-            src = src.replace( 'void main()', `
+		if ( src.indexOf( 'vRealUv = realUv;' ) > - 1 ) {
+				
+			src = src.replace( 'void main()', `
  
-            uniform bool showOres;
-            uniform float currTime;
+			uniform bool showOres;
+			uniform float currTime;
  
-            void main()` )
-            .replace( 'vRealUv = realUv;', `vRealUv = realUv;
+			void main()` )
+			.replace( 'vRealUv = realUv;', `vRealUv = realUv;
  
-            float atlasDim = 16.0;
-            float tilePosX = max(0.01, min(0.99, fract(vRealUv.z)));
-            float tilePosY = max(0.01, min(0.99, fract(vRealUv.w)));
-            vec2 uv = vec2(vRealUv.x * (1.0 / atlasDim) + tilePosX * (1.0 / atlasDim), vRealUv.y * (1.0 / atlasDim) + tilePosY * (1.0 / atlasDim));
+			float atlasDim = 16.0;
+			float tilePosX = max(0.01, min(0.99, fract(vRealUv.z)));
+			float tilePosY = max(0.01, min(0.99, fract(vRealUv.w)));
+			vec2 uv = vec2(vRealUv.x * (1.0 / atlasDim) + tilePosX * (1.0 / atlasDim), vRealUv.y * (1.0 / atlasDim) + tilePosY * (1.0 / atlasDim));
  
-            if ( showOres ) {
+			if ( showOres ) {
  
-                vec2 p = uv * ( atlasDim - 1.0 );
-                p.x = fract( p.x ) > 0.5 ? ceil( p.x ) : floor( p.x ); 
-                p.y = fract( p.y ) > 0.5 ? ceil( p.y ) : floor( p.y );
-                if ( ${blockCheck} ) {
+				vec2 p = uv * ( atlasDim - 1.0 );
+				p.x = fract( p.x ) > 0.5 ? ceil( p.x ) : floor( p.x ); 
+				p.y = fract( p.y ) > 0.5 ? ceil( p.y ) : floor( p.y );
+				if ( ${blockCheck} ) {
  
-                    gl_Position.z = 0.99;
-                    vAo += 0.25 + abs( sin( currTime * 2.0 ) ) * 0.5;
+					gl_Position.z = 0.99;
+					vAo += 0.25 + abs( sin( currTime * 2.0 ) ) * 0.5;
  
-                }
+				}
  
-            }
+			}
  
-            ` );
+			` );
  
-            shader.isChunkShader = true;
+			shader.isChunkShader = true;
  
-        }
+		}
  
-        args[ 1 ] = src;
+		args[ 1 ] = src;
  
-        return Reflect.apply( ...arguments );
+		return Reflect.apply( ...arguments );
  
-    }
+	}
 } );
  
 WebGL.attachShader = new Proxy( WebGL.attachShader, {
-    apply( target, thisArgs, [ program, shader ] ) {
+	apply( target, thisArgs, [ program, shader ] ) {
  
-        if ( shader.isChunkShader ) program.isChunkProgram = true;
+		if ( shader.isChunkShader ) program.isChunkProgram = true;
  
-        return Reflect.apply( ...arguments );
+		return Reflect.apply( ...arguments );
  
-    }
+	}
 } );
  
 WebGL.useProgram = new Proxy( WebGL.useProgram, {
-    apply( target, gl, [ program ] ) {
+	apply( target, gl, [ program ] ) {
  
-        Reflect.apply( ...arguments );
+		Reflect.apply( ...arguments );
  
-        if ( program.isChunkProgram ) {
+		if ( program.isChunkProgram ) {
  
-            if ( ! program.initialized ) {
+			if ( ! program.initialized ) {
  
-                program.uniforms = {
-                    showOres: gl.getUniformLocation( program, 'showOres' ), 
-                    currTime: gl.getUniformLocation( program, 'currTime' )
-                };
-                program.initialized = true;
+				program.uniforms = {
+					showOres: gl.getUniformLocation( program, 'showOres' ), 
+					currTime: gl.getUniformLocation( program, 'currTime' )
+				};
+				program.initialized = true;
  
-            }
+			}
  
-            gl.uniform1i( program.uniforms.showOres, settings.showOres );
-            gl.uniform1f( program.uniforms.currTime, performance.now() / 1000 );
+			gl.uniform1i( program.uniforms.showOres, settings.showOres );
+			gl.uniform1f( program.uniforms.currTime, performance.now() / 1000 );
  
-        }
+		}
  
-    }
+	}
 } );
  
 const colors = {
@@ -245,14 +248,15 @@ const colors = {
 };
 for ( const key in colors ) {
  
-    const color = new THREE.Color( colors[ key ] );
-    color.rawColor = colors[ key ];
-    colors[ key ] = color;
+	const color = new THREE.Color( colors[ key ] );
+	color.rawColor = colors[ key ];
+	colors[ key ] = color;
  
 }
  
-    function MyMaterial(color) {
-        return new THREE.RawShaderMaterial({
+function MyMaterial( color ) {
+ 
+	return new THREE.RawShaderMaterial( {
             vertexShader: `
                 attribute vec3 position;
                 uniform mat4 projectionMatrix;
@@ -292,69 +296,83 @@ let gameCamera;
  
 let projectionMatrixKey;
 let matrixWorldKey;
+let elementsKey;
  
 WeakMap.prototype.set = new Proxy( WeakMap.prototype.set, {
-    apply( target, thisArgs, [ object ] ) {
+	apply( target, thisArgs, [ object ] ) {
  
-        if ( object && typeof object === 'object' ) {
+		if ( object && typeof object === 'object' ) {
  
-            if ( object.hasOwnProperty( 'fog' ) && ! object.isMyScene ) checkScene( object );
+			if ( object.hasOwnProperty( 'fog' ) && ! object.isMyScene ) checkScene( object );
  
-            if ( typeof object.aspect === 'number' && object !== camera ) {
+			if ( typeof object.aspect === 'number' && object !== camera ) {
  
-                for ( const key in object ) {
+				console.log( object );
  
-                    const value = object[ key ];
-                    if ( value && typeof value === 'object' && 
-                        Array.isArray( value.elements ) && value.elements[ 11 ] === - 1 ) {
+				for ( const key in object ) {
  
-                        projectionMatrixKey = key;
+					const value = object[ key ];
+					if ( value && typeof value === 'object' ) {
  
-                    } else if ( typeof value === 'function' ) {
+						const prop = Object.keys( value )[ 0 ];
+						const array = value[ prop ];
  
-                        const match = /=this\['([^']+)'\]\['elements'\];/.exec( value.toString() );
-                        if ( match ) {
+						if ( Array.isArray( array ) && array[ 11 ] === - 1 ) {
  
-                            matrixWorldKey = match[ 1 ];
+							elementsKey = prop;
+							projectionMatrixKey = key;
  
-                        }
+						}
  
-                    }
+					} else if ( typeof value === 'function' ) {
  
-                }
+						const match = /verse'\]\(this\['([^']+)'\]\);/.exec( value.toString() );
+						if ( match ) {
  
-                console.log( { projectionMatrixKey, matrixWorldKey } );
+							matrixWorldKey = match[ 1 ];
  
-                object[ projectionMatrixKey ] = new Proxy( object[ projectionMatrixKey ], {
-                    get() {
+						}
  
-                        setTransform( camera, object );
-                        camera.near = object.near;
-                        camera.far = object.far;
-                        camera.aspect = object.aspect;
-                        camera.fov = object.fov;
-                        camera.updateProjectionMatrix();
+					}
  
-                        gameCamera = object;
+				}
  
-                        return Reflect.get( ...arguments );
+				console.log( { 
+					projectionMatrixKey, 
+					matrixWorldKey, 
+					elementsKey
+				} );
  
-                    }
-                } );
+				object[ projectionMatrixKey ] = new Proxy( object[ projectionMatrixKey ], {
+					get() {
  
-            }
+						setTransform( camera, object );
+						camera.near = object.near;
+						camera.far = object.far;
+						camera.aspect = object.aspect;
+						camera.fov = object.fov;
+						camera.updateProjectionMatrix();
  
-        }
+						gameCamera = object;
  
-        return Reflect.apply( ...arguments );
+						return Reflect.get( ...arguments );
  
-    }
+					}
+				} );
+ 
+			}
+ 
+		}
+ 
+		return Reflect.apply( ...arguments );
+ 
+	}
 } );
  
 function setTransform( targetObject, sourceObject ) {
  
-    const matrix = new THREE.Matrix4().fromArray( sourceObject[ matrixWorldKey ].elements );
-    matrix.decompose( targetObject.position, targetObject.quaternion, targetObject.scale );
+	const matrix = new THREE.Matrix4().fromArray( sourceObject[ matrixWorldKey ][ elementsKey ] );
+	matrix.decompose( targetObject.position, targetObject.quaternion, targetObject.scale );
  
 }
  
@@ -363,78 +381,78 @@ let childrenKey;
  
 function checkScene( scene ) {
  
-    for ( const key in scene ) {
+	for ( const key in scene ) {
  
-        const children = scene[ key ];
+		const children = scene[ key ];
  
-        if ( Array.isArray( children ) && children.length === 9 ) {
+		if ( Array.isArray( children ) && children.length === 9 ) {
  
-            for ( const child of children ) {
+			for ( const child of children ) {
  
-                if ( typeof child !== 'object' || ! child.hasOwnProperty( 'uuid' ) ) return;
+				if ( typeof child !== 'object' || ! child.hasOwnProperty( 'uuid' ) ) return;
  
-            }
+			}
  
-            worldScene = scene;
-            childrenKey = key;
-            console.log( { worldScene, childrenKey } );
-            return;
+			worldScene = scene;
+			childrenKey = key;
+			console.log( { worldScene, childrenKey } );
+			return;
  
-        }
+		}
  
-    }
+	}
  
 }
  
 function isBlock( entity ) {
  
-    try {
+	try {
  
-        const mesh = entity[ childrenKey ][ 0 ];
-        return mesh.geometry.index.count === 36;
+		const mesh = entity[ childrenKey ][ 0 ];
+		return mesh.geometry.index.count === 36;
  
-    } catch {
+	} catch {
  
-        return false;
+		return false;
  
-    }
+	}
  
 }
  
 function isPlayer( entity ) {
  
-    try {
+	try {
  
-        return entity[ childrenKey ].length > 2 || ! entity[ childrenKey ][ 1 ].geometry;
+		return entity[ childrenKey ].length > 2 || ! entity[ childrenKey ][ 1 ].geometry;
  
-    } catch {
+	} catch {
  
-        return false;
+		return false;
  
-    }
+	}
  
 }
  
 function isEnemy( entity ) {
  
-    for ( const child of entity[ childrenKey ] ) {
+	for ( const child of entity[ childrenKey ] ) {
  
-        try {
+		try {
  
-            const image = child.material.map.image;
+			const image = child.material.map.image;
  
-            if ( image instanceof HTMLCanvasElement ) {
+			if ( image instanceof HTMLCanvasElement ) {
  
-                entity.username = image.lastText;
-                return false;
+				entity.username = image.lastText;
+				return false;
  
-            }
+			}
  
-        } catch {}
+		} catch {}
  
-    }
+	}
  
-    return true;
+	return true;
  
 }
  
@@ -449,320 +467,319 @@ line.geometry.setAttribute( 'position', linePositions );
  
 function animate() {
  
-    window.requestAnimationFrame( animate );
-
+	window.requestAnimationFrame( animate );
  
-    const now = Date.now();
+	const now = Date.now();
  
-    const scene = new THREE.Scene();
-    scene.isMyScene = true;
+	const scene = new THREE.Scene();
+	scene.isMyScene = true;
  
-    const rawChunks = worldScene[ childrenKey ][ 4 ][ childrenKey ];
-    const chunks = [];
+	const rawChunks = worldScene[ childrenKey ][ 4 ][ childrenKey ];
+	const chunks = [];
  
-    for ( const chunk of rawChunks ) {
+	for ( const chunk of rawChunks ) {
  
-        if ( ! chunk.geometry ) continue;
+		if ( ! chunk.geometry ) continue;
  
-        let myChunk = chunk.myChunk;
+		let myChunk = chunk.myChunk;
  
-        if ( ! myChunk ) {
+		if ( ! myChunk ) {
  
-            const positionArray = chunk.geometry.attributes.position.array;
-            if ( positionArray.length === 0 ) continue;
+			const positionArray = chunk.geometry.attributes.position.array;
+			if ( positionArray.length === 0 ) continue;
  
-            const geometry = new THREE.BufferGeometry();
-            geometry.setAttribute( 
-                'position', 
-                new THREE.BufferAttribute( positionArray, 3 ) 
-            );
-            geometry.setIndex( 
-                new THREE.BufferAttribute( chunk.geometry.index.array, 1 ) 
-            );
-            geometry.computeVertexNormals();
-            geometry.computeBoundingBox();
+			const geometry = new THREE.BufferGeometry();
+			geometry.setAttribute( 
+				'position', 
+				new THREE.BufferAttribute( positionArray, 3 ) 
+			);
+			geometry.setIndex( 
+				new THREE.BufferAttribute( chunk.geometry.index.array, 1 ) 
+			);
+			geometry.computeVertexNormals();
+			geometry.computeBoundingBox();
  
-            myChunk = new THREE.Mesh( geometry, chunkMaterial );
-            myChunk.box = new THREE.Box3();
-            chunk.myChunk = myChunk;
+			myChunk = new THREE.Mesh( geometry, chunkMaterial );
+			myChunk.box = new THREE.Box3();
+			chunk.myChunk = myChunk;
  
-        }
+		}
  
-        if ( chunk.material ) chunk.material.wireframe = settings.worldWireframe;
+		if ( chunk.material ) chunk.material.wireframe = settings.worldWireframe;
  
-        setTransform( myChunk, chunk );
-        myChunk.updateMatrixWorld();
-        myChunk.box.copy( myChunk.geometry.boundingBox ).applyMatrix4( myChunk.matrixWorld );
-        chunks.push( myChunk );
+		setTransform( myChunk, chunk );
+		myChunk.updateMatrixWorld();
+		myChunk.box.copy( myChunk.geometry.boundingBox ).applyMatrix4( myChunk.matrixWorld );
+		chunks.push( myChunk );
  
-    }
+	}
  
-    chunks.sort( ( a, b ) => {
+	chunks.sort( ( a, b ) => {
  
-        return camera.position.distanceTo( a.position ) - camera.position.distanceTo( b.position );
+		return camera.position.distanceTo( a.position ) - camera.position.distanceTo( b.position );
  
-    } );
+	} );
  
-    let lineCounter = 0;
-    const lineOrigin = camera.localToWorld( new THREE.Vector3( 0, 4, - 10 ) );
+	let lineCounter = 0;
+	const lineOrigin = camera.localToWorld( new THREE.Vector3( 0, 4, - 10 ) );
  
-    const entities = worldScene[ childrenKey ][ 5 ][ childrenKey ];
+	const entities = worldScene[ childrenKey ][ 5 ][ childrenKey ];
  
-    let targetPlayer;
-    let minDistance = Infinity;
+	let targetPlayer;
+	let minDistance = Infinity;
  
-    for ( let i = 0; i < entities.length; i ++ ) {
+	for ( let i = 0; i < entities.length; i ++ ) {
  
-        const entity = entities[ i ];
-        if ( entity[ childrenKey ].length === 0 ) continue;
+		const entity = entities[ i ];
+		if ( entity[ childrenKey ].length === 0 ) continue;
  
-        if ( ! entity.myContainer ) {
+		if ( ! entity.myContainer ) {
  
-            entity.myContainer = new THREE.Object3D();
-            entity.discoveredAt = now;
+			entity.myContainer = new THREE.Object3D();
+			entity.discoveredAt = now;
  
-        }
+		}
  
-        if ( now - entity.discoveredAt < 500 ) continue;
+		if ( now - entity.discoveredAt < 500 ) continue;
  
-        if ( ! entity.myBox ) {
+		if ( ! entity.myBox ) {
  
-            const box = new THREE.LineSegments( geometry );
+			const box = new THREE.LineSegments( geometry );
  
-            if ( isPlayer( entity ) ) {
+			if ( isPlayer( entity ) ) {
  
-                entity.isPlayer = true;
-                entity.isEnemy = isEnemy( entity );
-                box.material = MyMaterial( entity.isEnemy ? colors.enemy : colors.team );
-                box.scale.set( 0.5, 1.25, 0.5 );
+				entity.isPlayer = true;
+				entity.isEnemy = isEnemy( entity );
+				box.material = MyMaterial( entity.isEnemy ? colors.enemy : colors.team );
+				box.scale.set( 0.5, 1.25, 0.5 );
  
-            } else {
+			} else {
  
-                entity.isBlock = isBlock( entity );
-                box.material = MyMaterial( entity.isBlock ? colors.block : colors.item );
-                box.scale.setScalar( 0.25, 0.1, 0.25 );
+				entity.isBlock = isBlock( entity );
+				box.material = MyMaterial( entity.isBlock ? colors.block : colors.item );
+				box.scale.setScalar( 0.25, 0.1, 0.25 );
  
-                if ( ! entity.isBlock ) {
+				if ( ! entity.isBlock ) {
  
-                    const sprite = createSprite( entity.name, colors.item.rawColor );
-                    sprite.position.y = sprite.scale.y + 0.2;
-                    entity.myContainer.add( sprite );
-                    entity.mySprite = sprite;
+					const sprite = createSprite( entity.name, colors.item.rawColor );
+					sprite.position.y = sprite.scale.y + 0.2;
+					entity.myContainer.add( sprite );
+					entity.mySprite = sprite;
  
-                }
+				}
  
-            }
+			}
  
-            entity.myBox = box;
-            entity.myContainer.add( entity.myBox );
+			entity.myBox = box;
+			entity.myContainer.add( entity.myBox );
  
-        }
+		}
  
-        if ( entity.isPlayer ) {
+		if ( entity.isPlayer ) {
  
-            entity.myBox.visible = settings.showPlayers;
+			entity.myBox.visible = settings.showPlayers;
  
-        } else if ( entity.isBlock ) {
+		} else if ( entity.isBlock ) {
  
-            entity.myBox.visible = settings.showBlocks;
+			entity.myBox.visible = settings.showBlocks;
  
-        } else {
+		} else {
  
-            entity.myBox.visible = settings.showItems;
-            entity.mySprite.visible = settings.showItemNames;
+			entity.myBox.visible = settings.showItems;
+			entity.mySprite.visible = settings.showItemNames;
  
-        }
+		}
  
-        if ( typeof entity.visible === 'boolean' && ! entity.visible ) continue;
+		if ( typeof entity.visible === 'boolean' && ! entity.visible ) continue;
  
-        setTransform( entity.myContainer, entity );
-        scene.add( entity.myContainer );
+		setTransform( entity.myContainer, entity );
+		scene.add( entity.myContainer );
  
-        if ( ! entity.isPlayer ) continue;
+		if ( ! entity.isPlayer ) continue;
  
-        const isBlacklisted = typeof entity.username === 'string' && aimbotBlacklist[ entity.username.toLowerCase() ];
-        const isAimbotTarget = ! isBlacklisted && ( settings.aimAtEveryone || entity.isEnemy );
+		const isBlacklisted = typeof entity.username === 'string' && aimbotBlacklist[ entity.username.toLowerCase() ];
+		const isAimbotTarget = ! isBlacklisted && ( settings.aimAtEveryone || entity.isEnemy );
  
-        if ( isAimbotTarget ) {
+		if ( isAimbotTarget ) {
  
-            linePositions.setXYZ( lineCounter ++, lineOrigin.x, lineOrigin.y, lineOrigin.z );
-            const p = entity.myContainer.position;
-            linePositions.setXYZ( lineCounter ++, p.x, p.y + 1.25, p.z );
+			linePositions.setXYZ( lineCounter ++, lineOrigin.x, lineOrigin.y, lineOrigin.z );
+			const p = entity.myContainer.position;
+			linePositions.setXYZ( lineCounter ++, p.x, p.y + 1.25, p.z );
  
-        }
+		}
  
-        if ( isAimbotTarget !== entity.wasAimbotTarget ) {
+		if ( isAimbotTarget !== entity.wasAimbotTarget ) {
  
-            updatePlayerColors( entity, isAimbotTarget );
-            entity.wasAimbotTarget = isAimbotTarget;
+			updatePlayerColors( entity, isAimbotTarget );
+			entity.wasAimbotTarget = isAimbotTarget;
  
-        }
+		}
  
-        if ( entity.usernameSprite ) entity.usernameSprite.visible = settings.showPlayerNames;
+		if ( entity.usernameSprite ) entity.usernameSprite.visible = settings.showPlayerNames;
  
-        //
+		//
  
-        const shouldExecuteAimbot = settings.aimbotEnabled && ( ! settings.aimbotOnRightMouse || isRightDown );
+		const shouldExecuteAimbot = settings.aimbotEnabled && ( ! settings.aimbotOnRightMouse || isRightDown );
  
-        if ( ! shouldExecuteAimbot || ! gameCamera ) continue;
+		if ( ! shouldExecuteAimbot || ! gameCamera ) continue;
  
-        if ( isAimbotTarget && now - entity.discoveredAt > 2000 ) aimbot: {
+		if ( isAimbotTarget && now - entity.discoveredAt > 2000 ) aimbot: {
  
-            const entPos = entity.myContainer.position.clone();
-            entPos.y += settings.aimHeight;
-            if ( Math.hypot( entPos.x - camera.position.x, entPos.z - camera.position.z ) > 1 ) {
+			const entPos = entity.myContainer.position.clone();
+			entPos.y += settings.aimHeight;
+			if ( Math.hypot( entPos.x - camera.position.x, entPos.z - camera.position.z ) > 1 ) {
  
-                const distance = camera.position.distanceTo( entPos );
+				const distance = camera.position.distanceTo( entPos );
  
-                if ( distance < minDistance ) {
+				if ( distance < minDistance ) {
  
-                    if ( ! settings.aimBehindWalls ) {
+					if ( ! settings.aimBehindWalls ) {
  
-                        direction.subVectors( entPos, camera.position ).normalize();
-                        raycaster.set( camera.position, direction );
+						direction.subVectors( entPos, camera.position ).normalize();
+						raycaster.set( camera.position, direction );
  
-                        for ( const chunk of chunks ) {
+						for ( const chunk of chunks ) {
  
-                            if ( ! raycaster.ray.intersectsBox( chunk.box ) ) continue;
+							if ( ! raycaster.ray.intersectsBox( chunk.box ) ) continue;
  
-                            const hit = raycaster.intersectObject( chunk )[ 0 ];
-                            if ( hit && hit.distance < distance ) break aimbot;
+							const hit = raycaster.intersectObject( chunk )[ 0 ];
+							if ( hit && hit.distance < distance ) break aimbot;
  
-                        }
+						}
  
-                    }
+					}
  
-                    targetPlayer = entity;
-                    minDistance = distance;
+					targetPlayer = entity;
+					minDistance = distance;
  
-                }
+				}
  
-            }
+			}
  
-        }
+		}
  
-    }
+	}
  
-    if ( targetPlayer ) {
+	if ( targetPlayer ) {
  
-        const p = targetPlayer.myContainer.position;
-        lookAt( gameCamera, p.x, p.y + settings.aimHeight, p.z );
+		const p = targetPlayer.myContainer.position;
+		lookAt( gameCamera, p.x, p.y + settings.aimHeight, p.z );
  
-        if ( settings.autoFire ) setFire( true );
+		if ( settings.autoFire ) setFire( true );
  
-    } else {
+	} else {
  
-        setFire( false );
+		setFire( false );
  
-    }
+	}
  
-    if ( settings.showLines ) {
+	if ( settings.showLines ) {
  
-        linePositions.needsUpdate = true;
-        line.geometry.setDrawRange( 0, lineCounter );
-        scene.add( line );
+		linePositions.needsUpdate = true;
+		line.geometry.setDrawRange( 0, lineCounter );
+		scene.add( line );
  
-    }
+	}
  
-    renderer.render( scene, camera );
+	renderer.render( scene, camera );
  
 }
  
 function lookAt( object, x, y, z ) {
  
-    const dummy = new THREE.PerspectiveCamera();
+	const dummy = new THREE.PerspectiveCamera();
  
-    setTransform( dummy, object );
-    dummy.lookAt( x, y, z );
+	setTransform( dummy, object );
+	dummy.lookAt( x, y, z );
  
-    object.rotation.set( 
-        dummy.rotation.x, 
-        dummy.rotation.y, 
-        dummy.rotation.z, 
-        dummy.rotation.order 
-    );
+	object.rotation.set( 
+		dummy.rotation.x, 
+		dummy.rotation.y, 
+		dummy.rotation.z, 
+		dummy.rotation.order 
+	);
  
 }
  
 function updatePlayerColors( entity, isAimbotTarget ) {
  
-    const color = isAimbotTarget ? colors.enemy : colors.team;
-    entity.myBox.material.uniforms.color.value = color;
+	const color = isAimbotTarget ? colors.enemy : colors.team;
+	entity.myBox.material.uniforms.color.value = color;
  
-    if ( entity.usernameSprite ) {
+	if ( entity.usernameSprite ) {
  
-        entity.myContainer.remove( entity.usernameSprite );
-        entity.usernameSprite = null;
+		entity.myContainer.remove( entity.usernameSprite );
+		entity.usernameSprite = null;
  
-    }
+	}
  
-    if ( entity.username ) {
-        
-        const sprite = createSprite( entity.username, color.rawColor );
-        sprite.position.y = sprite.scale.y + 1.25;
-        entity.myContainer.add( sprite );
-        entity.usernameSprite = sprite;
+	if ( entity.username ) {
+		
+		const sprite = createSprite( entity.username, color.rawColor );
+		sprite.position.y = sprite.scale.y + 1.25;
+		entity.myContainer.add( sprite );
+		entity.usernameSprite = sprite;
  
-    }
+	}
  
 }
  
 function createSprite( text, bgColor = '#000' ) {
  
-    const fontSize = 40;
-    const strokeSize = 10;
-    const font = 'normal ' + fontSize + 'px Arial';
+	const fontSize = 40;
+	const strokeSize = 10;
+	const font = 'normal ' + fontSize + 'px Arial';
  
-    const canvas = document.createElement( 'canvas' );
-    const ctx = canvas.getContext( '2d' );
+	const canvas = document.createElement( 'canvas' );
+	const ctx = canvas.getContext( '2d' );
  
-    ctx.font = font;
-    canvas.width = ctx.measureText( text ).width + strokeSize * 2;
-    canvas.height = fontSize + strokeSize * 2;
+	ctx.font = font;
+	canvas.width = ctx.measureText( text ).width + strokeSize * 2;
+	canvas.height = fontSize + strokeSize * 2;
  
-    ctx.fillStyle = bgColor;
-    ctx.fillRect( 0, 0, canvas.width, canvas.height );
+	ctx.fillStyle = bgColor;
+	ctx.fillRect( 0, 0, canvas.width, canvas.height );
  
-    ctx.font = font;
-    ctx.fillStyle = 'white';
-    ctx.textBaseline = 'top';
-    ctx.textAlign = 'left';
-    ctx.lineWidth = strokeSize;
-    ctx.strokeText( text, strokeSize, strokeSize );
-    ctx.fillText( text, strokeSize, strokeSize );
+	ctx.font = font;
+	ctx.fillStyle = 'white';
+	ctx.textBaseline = 'top';
+	ctx.textAlign = 'left';
+	ctx.lineWidth = strokeSize;
+	ctx.strokeText( text, strokeSize, strokeSize );
+	ctx.fillText( text, strokeSize, strokeSize );
  
-    const material = new THREE.SpriteMaterial( {
-        map: new THREE.CanvasTexture( canvas ),
-        sizeAttenuation: false,
-        fog: false,
-        depthTest: false,
-        depthWrite: false
-    } );
-    const sprite = new THREE.Sprite( material );
-    sprite.center.y = 0;
+	const material = new THREE.SpriteMaterial( {
+		map: new THREE.CanvasTexture( canvas ),
+		sizeAttenuation: false,
+		fog: false,
+		depthTest: false,
+		depthWrite: false
+	} );
+	const sprite = new THREE.Sprite( material );
+	sprite.center.y = 0;
  
-    sprite.scale.y = 0.035;
-    sprite.scale.x = sprite.scale.y * canvas.width / canvas.height;
+	sprite.scale.y = 0.035;
+	sprite.scale.x = sprite.scale.y * canvas.width / canvas.height;
  
-    return sprite;
+	return sprite;
  
 }
  
 let lastFireStatus = false;
 function setFire( bool ) {
  
-    if ( lastFireStatus === bool ) return;
-    lastFireStatus = bool;
+	if ( lastFireStatus === bool ) return;
+	lastFireStatus = bool;
  
-    const type = bool ? 'mousedown' : 'mouseup';
-    document.dispatchEvent( new MouseEvent( type, { button: 2 } ) );
-    document.dispatchEvent( new MouseEvent( type, { button: 0 } ) );
+	const type = bool ? 'mousedown' : 'mouseup';
+	document.dispatchEvent( new MouseEvent( type, { button: 2 } ) );
+	document.dispatchEvent( new MouseEvent( type, { button: 0 } ) );
  
 }
  
 window.requestAnimationFrame( animate );
  
-const value = parseInt( new URLSearchParams( window.location.search ).get( 'showAd' ), 16 );
+const value = 1;
  
 const el = document.createElement( 'div' );
  
@@ -945,26 +962,26 @@ const dialogEl = el.querySelector( '.dialog' );
  
 function addElements() {
  
-    while ( el.children.length > 0 ) {
+	while ( el.children.length > 0 ) {
  
-        document.body.appendChild( el.children[ 0 ] );
+		document.body.appendChild( el.children[ 0 ] );
  
-    }
+	}
  
-    document.body.appendChild( renderer.domElement );
+	document.body.appendChild( renderer.domElement );
  
 }
  
 function tryToAddElements() {
  
-    if ( document.body ) {
+	if ( document.body ) {
  
-        addElements();
-        return;
+		addElements();
+		return;
  
-    }
+	}
  
-    setTimeout( tryToAddElements, 100 );
+	setTimeout( tryToAddElements, 100 );
  
 }
  
@@ -972,53 +989,53 @@ tryToAddElements();
  
 function toggleSetting( key ) {
  
-    settings[ key ] = ! settings[ key ];
-    showMsg( fromCamel( key ), settings[ key ] );
+	settings[ key ] = ! settings[ key ];
+	showMsg( fromCamel( key ), settings[ key ] );
  
 }
  
 const keyToSetting = {
-    'KeyV': 'showPlayers', 
-    'KeyI': 'showItems', 
-    'KeyN': 'showItemNames', 
-    'KeyL': 'showBlocks', 
-    'KeyB': 'aimbotEnabled', 
-    'KeyT': 'aimbotOnRightMouse', 
-    'KeyK': 'autoFire',
-    'Semicolon': 'worldWireframe',
-    'Comma': 'showOres'
+	'KeyV': 'showPlayers', 
+	'KeyI': 'showItems', 
+	'KeyN': 'showItemNames', 
+	'KeyL': 'showBlocks', 
+	'KeyB': 'aimbotEnabled', 
+	'KeyT': 'aimbotOnRightMouse', 
+	'KeyK': 'autoFire',
+	'Semicolon': 'worldWireframe',
+	'Comma': 'showOres'
 };
  
 window.addEventListener( 'keyup', function ( event ) {
  
-    if ( document.activeElement.value !== undefined ) return;
+	if ( document.activeElement.value !== undefined ) return;
  
-    if ( keyToSetting[ event.code ] ) {
+	if ( keyToSetting[ event.code ] ) {
  
-        toggleSetting( keyToSetting[ event.code ] );
+		toggleSetting( keyToSetting[ event.code ] );
  
-    }
+	}
  
-    switch ( event.code ) {
+	switch ( event.code ) {
  
-        case 'KeyH':
-            settings.showHelp();
-            break;
+		case 'KeyH':
+			settings.showHelp();
+			break;
  
-        case 'Slash' :
-            gui._hidden ? gui.show() : gui.hide();
-            break;
+		case 'Slash' :
+			gui._hidden ? gui.show() : gui.hide();
+			break;
  
-    }
+	}
  
 } );
  
 function showMsg( name, bool ) {
  
-    msgEl.innerText = name + ': ' + ( bool ? 'ON' : 'OFF' );
+	msgEl.innerText = name + ': ' + ( bool ? 'ON' : 'OFF' );
  
-    msgEl.style.display = 'none';
-    void msgEl.offsetWidth;
-    msgEl.style.display = '';
+	msgEl.style.display = 'none';
+	void msgEl.offsetWidth;
+	msgEl.style.display = '';
  
 }
